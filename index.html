@@ -527,50 +527,57 @@ async function fetchAndCache() {
   const errorEl = document.getElementById('loadErrorMsg');
 
   try {
-    // ใช้ CSV export — ไม่มีปัญหา CORS
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
-    const res = await fetch(url, {redirect: 'follow'});
+    // ใช้ gviz/tq JSONP — ไม่ติด CORS ทุก browser
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}&headers=1`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const csv = await res.text();
+    const text = await res.text();
 
-    // Parse CSV
-    const lines = csv.split('\n').filter(l => l.trim());
-    if (lines.length < 2) throw new Error('No data');
+    // Parse JSONP response: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
+    const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+    const json = JSON.parse(jsonStr);
+    const rows = json.table.rows;
 
-    // Parse header
-    const header = parseCSVRow(lines[0]);
-    console.log('Columns:', header);
+    // คอลัมน์ตาม index (A=0, B=1, C=2 ...)
+    // A=ลำดับ(0) B=รายการสินค้า(1) C=รูป(2) D=ภาษา(3) E=สภาพสินค้า(4) F=On sale-Sold Out(5) G=Price Market(6) H=Sell Price(7)
+    // อ่าน header labels จาก cols เพื่อหาตำแหน่งคอลัมน์ที่ถูกต้อง
+    const cols = json.table.cols;
+    console.log('Headers:', cols.map(c => c.label));
 
-    // คอลัมน์: A=ลำดับ B=รายการสินค้า C=รูป D=ภาษา E=สภาพสินค้า F=On sale-Sold Out G=Price Market H=Sell Price
-    const idx = {
-      name: 1,  // B = รายการสินค้า
-      img:  2,  // C = รูป
-      lang: 3,  // D = ภาษา
-      cond: 4,  // E = สภาพสินค้า
-      stat: 5,  // F = On sale - Sold Out
-      mkt:  6,  // G = Price Market
-      sell: 7,  // H = Sell Price
-    };
-    console.log('Column indices:', idx);
+    const findCol = (...keywords) => cols.findIndex(c => 
+      keywords.some(k => (c.label||'').toLowerCase().includes(k.toLowerCase()))
+    );
 
-    PRODUCTS = lines.slice(1).map((line, i) => {
-      const cols = parseCSVRow(line);
-      const v = (j) => j >= 0 && j < cols.length ? cols[j].trim() : '';
-      const name = v(idx.name);
-      if (!name) return null;
-      const status = v(idx.stat);
-      // แสดงเฉพาะ On Sale และ Sold Out
-      const validStatus = ['On Sale', 'Sold Out'];
-      if (!validStatus.includes(status)) return null;
+    const iName = findCol('รายการสินค้า', 'รายการ', 'ชื่อ');
+    const iImg  = findCol('รูป', 'image', 'img', 'photo');
+    const iLang = findCol('ภาษา');
+    const iCond = findCol('สภาพ');
+    const iStat = findCol('On sale', 'On Sale', 'Sold', 'สถานะ');
+    const iMkt  = findCol('Price Market', 'ราคาตลาด', 'market');
+    const iSell = findCol('Sell Price', 'ราคาขาย', 'sell');
+
+    console.log('Col indices:', {iName, iImg, iLang, iCond, iStat, iMkt, iSell});
+
+    PRODUCTS = rows.map((row, i) => {
+      const v = (j) => {
+        if (j < 0 || !row.c || !row.c[j]) return '';
+        const cell = row.c[j];
+        if (!cell) return '';
+        return (cell.v !== null && cell.v !== undefined) ? String(cell.v) : (cell.f || '');
+      };
+      const name = v(iName).trim();
+      if (!name || name === 'null' || name === 'undefined') return null;
+      const status = v(iStat).trim();
+      if (status !== 'On Sale' && status !== 'Sold Out') return null;
       return {
         id: i + 1,
         name,
-        img:  v(idx.img),
-        lang: v(idx.lang) || 'อื่นๆ',
-        condition: v(idx.cond) || 'มือ 1',
+        img:  v(iImg).trim(),
+        lang: v(iLang).trim() || 'อื่นๆ',
+        condition: v(iCond).trim() || 'มือ 1',
         status,
-        marketPrice: parseFloat(v(idx.mkt).replace(/[^0-9.]/g,'')) || 0,
-        sellPrice:   parseFloat(v(idx.sell).replace(/[^0-9.]/g,'')) || 0,
+        marketPrice: parseFloat(v(iMkt)) || 0,
+        sellPrice:   parseFloat(v(iSell)) || 0,
       };
     }).filter(Boolean);
 
@@ -580,7 +587,7 @@ async function fetchAndCache() {
       localStorage.setItem('bgk_products_cache', JSON.stringify(PRODUCTS));
       localStorage.setItem('bgk_cache_time', Date.now().toString());
     } catch(e) {}
-    // ซ่อน loading ทันทีและแสดงผล
+    // ซ่อน loading และแสดงผลทันที
     document.querySelectorAll('#loadingOverlay').forEach(el => el.style.display = 'none');
     if (loadingEl) loadingEl.style.display = 'none';
     filtered = [...PRODUCTS];

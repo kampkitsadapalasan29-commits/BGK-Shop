@@ -542,27 +542,18 @@ async function fetchAndCache() {
     console.log('📋 Headers:', cols.map((c,i) => `[${i}]${c.label}`).join(', '));
 
     // หา index ของแต่ละคอลัมน์จาก label
-    const ci = (keywords) => cols.findIndex(c => 
-      keywords.some(k => (c.label||'').toLowerCase().includes(k.toLowerCase()))
-    );
-    const iName = ci(['รายการสินค้า','รายการ','name']);
-    const iImg  = ci(['รูป','image','img','photo','picture']);
-    const iLang = ci(['ภาษา','language','lang']);
-    const iCond = ci(['สภาพ','condition','cond']);
-    const iStat = ci(['on sale','sold out','on sale - sold','สถานะ','status']);
-    const iMkt  = ci(['price market','ราคาตลาด','market price']);
-    const iSell = ci(['sell price','ราคาขาย','selling']);
-
-    console.log('📊 Col map:', {iName,iImg,iLang,iCond,iStat,iMkt,iSell});
-
-    // ถ้าหาคอลัมน์ชื่อเกมไม่เจอ ใช้ B (index 1) เป็น fallback
-    const nameIdx = iName >= 0 ? iName : 1;
-    const imgIdx  = iImg  >= 0 ? iImg  : 2;
-    const langIdx = iLang >= 0 ? iLang : 3;
-    const condIdx = iCond >= 0 ? iCond : 4;
-    const statIdx = iStat >= 0 ? iStat : 5;
-    const mktIdx  = iMkt  >= 0 ? iMkt  : 6;
-    const sellIdx = iSell >= 0 ? iSell : 7;
+    // คอลัมน์ตำแหน่งจริงใน Sheets:
+    // A(0)=ลำดับ B(1)=รายการสินค้า C(2)=รูป(IMAGE formula) D(3)=ภาษา
+    // E(4)=สภาพสินค้า F(5)=On sale-Sold Out G(6)=Price Market H(7)=Sell Price
+    // I(8)=URL รูปภาพ (plain text ที่ extract จาก IMAGE formula)
+    const nameIdx = 1;  // B = รายการสินค้า
+    const imgIdx  = 8;  // I = URL รูปภาพ (plain text)
+    const langIdx = 3;  // D = ภาษา
+    const condIdx = 4;  // E = สภาพสินค้า
+    const statIdx = 5;  // F = On sale - Sold Out
+    const mktIdx  = 6;  // G = Price Market
+    const sellIdx = 7;  // H = Sell Price
+    console.log('📊 Using col indices: name=1, img=8, lang=3, cond=4, stat=5, mkt=6, sell=7');
 
     const getVal = (row, j) => {
       if (j < 0 || !row.c || j >= row.c.length || !row.c[j]) return '';

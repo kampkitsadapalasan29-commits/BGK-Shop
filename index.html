@@ -497,8 +497,34 @@ let PRODUCTS = [];
 async function loadFromSheets() {
   const loadingEl = document.getElementById('loadingOverlay');
   const errorEl = document.getElementById('loadErrorMsg');
-  if (loadingEl) loadingEl.style.display = 'flex';
   if (errorEl) errorEl.style.display = 'none';
+
+  // ลอง load จาก Cache ก่อน — แสดงผลทันทีถ้ามี cache
+  const CACHE_KEY = 'bgk_products_cache';
+  const CACHE_TIME = 'bgk_cache_time';
+  const cached = localStorage.getItem(CACHE_KEY);
+  const cacheAge = Date.now() - parseInt(localStorage.getItem(CACHE_TIME) || '0');
+  const CACHE_TTL = 5 * 60 * 1000; // 5 นาที
+
+  if (cached && cacheAge < CACHE_TTL) {
+    PRODUCTS = JSON.parse(cached);
+    console.log(`⚡ โหลดจาก Cache: ${PRODUCTS.length} รายการ`);
+    if (loadingEl) loadingEl.style.display = 'none';
+    filtered = [...PRODUCTS];
+    applyFilters();
+    setTimeout(() => renderAdmin(), 100);
+    // โหลดใหม่ใน background เพื่ออัปเดต
+    fetchAndCache();
+    return;
+  }
+
+  if (loadingEl) loadingEl.style.display = 'flex';
+  await fetchAndCache();
+}
+
+async function fetchAndCache() {
+  const loadingEl = document.getElementById('loadingOverlay');
+  const errorEl = document.getElementById('loadErrorMsg');
 
   try {
     // ใช้ CSV export — ไม่มีปัญหา CORS
@@ -549,6 +575,18 @@ async function loadFromSheets() {
     }).filter(Boolean);
 
     console.log(`✅ โหลด ${PRODUCTS.length} รายการจาก Sheets`);
+    // บันทึก Cache
+    try {
+      localStorage.setItem('bgk_products_cache', JSON.stringify(PRODUCTS));
+      localStorage.setItem('bgk_cache_time', Date.now().toString());
+    } catch(e) {}
+    // ซ่อน loading และแสดงผลทันที ไม่รอ renderAdmin
+    if (loadingEl) loadingEl.style.display = 'none';
+    filtered = [...PRODUCTS];
+    applyFilters();
+    // renderAdmin ทีหลัง ไม่บล็อก UI
+    setTimeout(() => renderAdmin(), 100);
+    return;
   } catch(e) {
     console.error('โหลดไม่ได้:', e);
     if (errorEl) errorEl.style.display = 'block';
@@ -556,7 +594,6 @@ async function loadFromSheets() {
   if (loadingEl) loadingEl.style.display = 'none';
   filtered = [...PRODUCTS];
   applyFilters();
-  renderAdmin();
 }
 
 function parseCSVRow(row) {

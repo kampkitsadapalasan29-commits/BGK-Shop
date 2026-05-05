@@ -476,18 +476,30 @@
         <label>เบอร์โทรศัพท์ *</label>
         <input type="tel" id="orderPhone" placeholder="08x-xxx-xxxx">
       </div>
+    </div>
+    <div class="form-group">
+      <label>ที่อยู่จัดส่ง *</label>
+      <textarea id="orderAddr" placeholder="บ้านเลขที่ / ถนน / แขวง / เขต / จังหวัด / รหัสไปรษณีย์" style="min-height:80px;"></textarea>
+    </div>
+    <div class="form-row">
       <div class="form-group">
-        <label>Line ID</label>
-        <input type="text" id="orderLine" placeholder="@line_id">
+        <label>ช่องทางชำระเงิน</label>
+        <select id="orderPayment" style="padding:0.6rem;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-family:'Prompt',sans-serif;font-size:0.88rem;width:100%;">
+          <option value="โอนเงิน">โอนเงิน</option>
+          <option value="PromptPay">PromptPay</option>
+          <option value="เก็บปลายทาง">เก็บปลายทาง</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>ขนส่ง</label>
+        <select id="orderShipping" style="padding:0.6rem;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-family:'Prompt',sans-serif;font-size:0.88rem;width:100%;" disabled>
+          <option value="ไปรษณีย์ไทย">ไปรษณีย์ไทย</option>
+        </select>
       </div>
     </div>
     <div class="form-group">
-      <label>ที่อยู่จัดส่ง</label>
-      <textarea id="orderAddr" placeholder="กรอกที่อยู่สำหรับจัดส่งสินค้า"></textarea>
-    </div>
-    <div class="form-group">
-      <label>หมายเหตุเพิ่มเติม</label>
-      <textarea id="orderNote" placeholder="เช่น ต้องการจัดส่งด่วน..." style="min-height:60px;"></textarea>
+      <label>หมายเหตุ (ถ้ามี)</label>
+      <textarea id="orderNote" placeholder="เช่น ห่อของขวัญ / ฝากไว้หน้าบ้าน..." style="min-height:60px;"></textarea>
     </div>
     <div style="background:var(--card-bg);border-radius:10px;padding:0.8rem;margin-bottom:1rem;font-size:0.82rem;color:var(--text-muted);">
       รวมทั้งสิ้น: <span style="color:var(--accent2);font-weight:700;font-size:1rem;" id="orderTotal">฿0</span>
@@ -997,13 +1009,33 @@ function closeOrder() {
   document.getElementById('orderModal').classList.remove('show');
 }
 
-function submitOrder() {
+const ORDERS_URL = 'https://script.google.com/macros/s/AKfycbyaF-nWzsKASCgpZwh14FuXN7wr2jNMrngvAPmlN10yNJQIVTV9HBBX19eb9ZKoictrvA/exec';
+
+async function submitOrder() {
   const name = document.getElementById('orderName').value.trim();
   const phone = document.getElementById('orderPhone').value.trim();
-  if (!name || !phone) {
-    alert('กรุณากรอกชื่อและเบอร์โทรศัพท์');
-    return;
-  }
+  const addr = document.getElementById('orderAddr').value.trim();
+  if (!name || !phone) { alert('กรุณากรอกชื่อและเบอร์โทรศัพท์'); return; }
+  if (!addr) { alert('กรุณากรอกที่อยู่จัดส่ง'); return; }
+
+  const btn = document.querySelector('#orderModal .confirm-btn') ||
+              document.querySelector('[onclick="submitOrder()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
+
+  const items = cart.map(p => `${p.name} (${p.condition}) ฿${p.sellPrice}`).join(', ');
+  const total = cart.reduce((s, p) => s + p.sellPrice, 0);
+  const payment = document.getElementById('orderPayment')?.value || 'โอนเงิน';
+  const note = document.getElementById('orderNote').value.trim();
+
+  try {
+    await fetch(ORDERS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, address: addr, items, total, payment, note })
+    });
+  } catch(e) { console.error('Order error:', e); }
+
   closeOrder();
   cart = [];
   updateCartCount();

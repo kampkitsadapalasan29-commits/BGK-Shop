@@ -527,100 +527,91 @@ async function fetchAndCache() {
   const errorEl = document.getElementById('loadErrorMsg');
 
   try {
-    // ใช้ gviz/tq JSONP — ไม่ติด CORS ทุก browser
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}&headers=1`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
 
-    // Parse JSONP response: /*O_o*/\ngoogle.visualization.Query.setResponse({...});
+    // Parse Google gviz JSONP response
     const jsonStr = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
     const json = JSON.parse(jsonStr);
+    const cols = json.table.cols;
     const rows = json.table.rows;
 
-    // คอลัมน์ตาม index (A=0, B=1, C=2 ...)
-    // A=ลำดับ(0) B=รายการสินค้า(1) C=รูป(2) D=ภาษา(3) E=สภาพสินค้า(4) F=On sale-Sold Out(5) G=Price Market(6) H=Sell Price(7)
-    // อ่าน header labels จาก cols เพื่อหาตำแหน่งคอลัมน์ที่ถูกต้อง
-    const cols = json.table.cols;
-    console.log('Headers:', cols.map(c => c.label));
+    // Log headers เพื่อ debug
+    console.log('📋 Headers:', cols.map((c,i) => `[${i}]${c.label}`).join(', '));
 
-    const findCol = (...keywords) => cols.findIndex(c => 
+    // หา index ของแต่ละคอลัมน์จาก label
+    const ci = (keywords) => cols.findIndex(c => 
       keywords.some(k => (c.label||'').toLowerCase().includes(k.toLowerCase()))
     );
+    const iName = ci(['รายการสินค้า','รายการ','name']);
+    const iImg  = ci(['รูป','image','img','photo','picture']);
+    const iLang = ci(['ภาษา','language','lang']);
+    const iCond = ci(['สภาพ','condition','cond']);
+    const iStat = ci(['on sale','sold out','on sale - sold','สถานะ','status']);
+    const iMkt  = ci(['price market','ราคาตลาด','market price']);
+    const iSell = ci(['sell price','ราคาขาย','selling']);
 
-    const iName = findCol('รายการสินค้า', 'รายการ', 'ชื่อ');
-    const iImg  = findCol('รูป', 'image', 'img', 'photo');
-    const iLang = findCol('ภาษา');
-    const iCond = findCol('สภาพ');
-    const iStat = findCol('On sale', 'On Sale', 'Sold', 'สถานะ');
-    const iMkt  = findCol('Price Market', 'ราคาตลาด', 'market');
-    const iSell = findCol('Sell Price', 'ราคาขาย', 'sell');
+    console.log('📊 Col map:', {iName,iImg,iLang,iCond,iStat,iMkt,iSell});
 
-    console.log('Col indices:', {iName, iImg, iLang, iCond, iStat, iMkt, iSell});
+    // ถ้าหาคอลัมน์ชื่อเกมไม่เจอ ใช้ B (index 1) เป็น fallback
+    const nameIdx = iName >= 0 ? iName : 1;
+    const imgIdx  = iImg  >= 0 ? iImg  : 2;
+    const langIdx = iLang >= 0 ? iLang : 3;
+    const condIdx = iCond >= 0 ? iCond : 4;
+    const statIdx = iStat >= 0 ? iStat : 5;
+    const mktIdx  = iMkt  >= 0 ? iMkt  : 6;
+    const sellIdx = iSell >= 0 ? iSell : 7;
+
+    const getVal = (row, j) => {
+      if (j < 0 || !row.c || j >= row.c.length || !row.c[j]) return '';
+      const cell = row.c[j];
+      if (cell.v !== null && cell.v !== undefined) return String(cell.v).trim();
+      return (cell.f || '').trim();
+    };
 
     PRODUCTS = rows.map((row, i) => {
-      const v = (j) => {
-        if (j < 0 || !row.c || !row.c[j]) return '';
-        const cell = row.c[j];
-        if (!cell) return '';
-        return (cell.v !== null && cell.v !== undefined) ? String(cell.v) : (cell.f || '');
-      };
-      const name = v(iName).trim();
-      if (!name || name === 'null' || name === 'undefined') return null;
-      const status = v(iStat).trim();
+      const name = getVal(row, nameIdx);
+      if (!name || name === 'null' || /^\d+$/.test(name)) return null; // ข้ามแถวที่ชื่อเป็นตัวเลขล้วน
+      const status = getVal(row, statIdx);
       if (status !== 'On Sale' && status !== 'Sold Out') return null;
+      const imgRaw = getVal(row, imgIdx);
       return {
         id: i + 1,
         name,
-        img:  v(iImg).trim(),
-        lang: v(iLang).trim() || 'อื่นๆ',
-        condition: v(iCond).trim() || 'มือ 1',
+        img: convertDriveUrl(imgRaw),
+        lang: getVal(row, langIdx) || 'อื่นๆ',
+        condition: getVal(row, condIdx) || 'มือ 1',
         status,
-        marketPrice: parseFloat(v(iMkt)) || 0,
-        sellPrice:   parseFloat(v(iSell)) || 0,
+        marketPrice: parseFloat(getVal(row, mktIdx)) || 0,
+        sellPrice:   parseFloat(getVal(row, sellIdx)) || 0,
       };
     }).filter(Boolean);
 
-    console.log(`✅ โหลด ${PRODUCTS.length} รายการจาก Sheets`);
-    // บันทึก Cache
+    console.log(`✅ โหลด ${PRODUCTS.length} รายการ`);
+
+    // Cache
     try {
       localStorage.setItem('bgk_products_cache', JSON.stringify(PRODUCTS));
       localStorage.setItem('bgk_cache_time', Date.now().toString());
     } catch(e) {}
-    // ซ่อน loading และแสดงผลทันที
+
     document.querySelectorAll('#loadingOverlay').forEach(el => el.style.display = 'none');
     if (loadingEl) loadingEl.style.display = 'none';
     filtered = [...PRODUCTS];
     applyFilters();
     setTimeout(() => renderAdmin(), 200);
     return;
+
   } catch(e) {
-    console.error('โหลดไม่ได้:', e);
+    console.error('❌ โหลดไม่ได้:', e);
     if (errorEl) errorEl.style.display = 'block';
   }
   if (loadingEl) loadingEl.style.display = 'none';
   filtered = [...PRODUCTS];
   applyFilters();
 }
-
-function parseCSVRow(row) {
-  const result = [];
-  let cur = '', inQ = false;
-  for (let i = 0; i < row.length; i++) {
-    const ch = row[i];
-    if (ch === '"') {
-      if (inQ && row[i+1] === '"') { cur += '"'; i++; }
-      else inQ = !inQ;
-    } else if (ch === ',' && !inQ) {
-      result.push(cur); cur = '';
-    } else {
-      cur += ch;
-    }
-  }
-  result.push(cur);
-  return result;
-}
-// แปลง Google Drive URL → Direct Image URL
 function convertDriveUrl(url) {
   if (!url || !url.startsWith('http')) return '';
   // รูปแบบ 1: https://drive.google.com/file/d/FILE_ID/view

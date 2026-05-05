@@ -605,16 +605,28 @@ async function fetchAndCache() {
 }
 function convertDriveUrl(url) {
   if (!url || !url.startsWith('http')) return '';
-  // รูปแบบ 1: https://drive.google.com/file/d/FILE_ID/view
-  const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (match1) return `https://drive.google.com/uc?export=view&id=${match1[1]}`;
-  // รูปแบบ 2: https://drive.google.com/open?id=FILE_ID
-  const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (match2) return `https://drive.google.com/uc?export=view&id=${match2[1]}`;
-  // รูปแบบ 3: https://drive.google.com/uc?export=view&id=FILE_ID (ถูกแล้ว)
-  if (url.includes('uc?export=view')) return url;
-  // รูปแบบ 4: https://lh3.googleusercontent.com (ถูกแล้ว)
+  
+  // Extract FILE_ID จากทุกรูปแบบ
+  let fileId = null;
+  
+  // รูปแบบ: /file/d/FILE_ID/
+  const m1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (m1) fileId = m1[1];
+  
+  // รูปแบบ: id=FILE_ID
+  if (!fileId) {
+    const m2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (m2) fileId = m2[1];
+  }
+  
+  // ถ้าได้ fileId → ใช้ thumbnail URL ที่ไม่ติด CORS
+  if (fileId) {
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
+  }
+  
+  // googleusercontent แล้ว — ใช้ได้เลย
   if (url.includes('googleusercontent.com')) return url;
+  
   return url;
 }
 

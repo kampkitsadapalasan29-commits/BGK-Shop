@@ -489,7 +489,7 @@
 <script>
 // ── Config ──────────────────────────────────────────────────
 const SHEET_ID = '1WIaF0y3lCLF4FZg4m3MbwSgMhVmLO3GjeRs1eBprYys';
-const SHEET_NAME = 'BGK DATA';
+const SHEET_NAME = 'Current Stock Product';
 // ────────────────────────────────────────────────────────────
 
 let PRODUCTS = [];
@@ -613,6 +613,22 @@ function parseCSVRow(row) {
   result.push(cur);
   return result;
 }
+// แปลง Google Drive URL → Direct Image URL
+function convertDriveUrl(url) {
+  if (!url || !url.startsWith('http')) return '';
+  // รูปแบบ 1: https://drive.google.com/file/d/FILE_ID/view
+  const match1 = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match1) return `https://drive.google.com/uc?export=view&id=${match1[1]}`;
+  // รูปแบบ 2: https://drive.google.com/open?id=FILE_ID
+  const match2 = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match2) return `https://drive.google.com/uc?export=view&id=${match2[1]}`;
+  // รูปแบบ 3: https://drive.google.com/uc?export=view&id=FILE_ID (ถูกแล้ว)
+  if (url.includes('uc?export=view')) return url;
+  // รูปแบบ 4: https://lh3.googleusercontent.com (ถูกแล้ว)
+  if (url.includes('googleusercontent.com')) return url;
+  return url;
+}
+
 const EMOJIS = ['🎲','🃏','♟️','🎯','🧩','🎭','⚔️','🏰','🚀','🌍','🐉','🗺️','🎪','🎰','🔮','🧙','🦁','🐺','🌊','🏔️'];
 const PAGE_SIZE = 40;
 let currentPage = 1;
@@ -686,11 +702,11 @@ function renderProducts() {
       return `
       <div class="product-card ${isSoldOut ? 'sold-out' : ''}" data-id="${p.id}">
         <div class="card-img" id="img-wrap-${p.id}">
-          ${p.img 
-            ? `<img src="${p.img}" class="loaded" alt="${p.name}" style="z-index:2" onerror="this.style.display='none';document.getElementById('emoji-${p.id}').classList.remove('hidden')">`
-            : (cachedImg ? `<img src="${cachedImg}" class="loaded" alt="${p.name}" style="z-index:2">` : '')}
-          <span class="img-placeholder${(p.img || cachedImg) ? ' hidden' : ''}" id="emoji-${p.id}">${getEmoji(p.name)}</span>
-          ${(!p.img && !cachedImg) ? `<div class="img-spinner" id="spin-${p.id}"><div class="spinner-ring"></div></div>` : ''}
+          ${p.img && p.img.startsWith('http')
+            ? `<img src="${convertDriveUrl(p.img)}" class="loaded" alt="${p.name}" style="z-index:2;width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" 
+                onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')">`
+            : ''}
+          <span class="img-placeholder${p.img && p.img.startsWith('http') ? ' hidden' : ''}" id="emoji-${p.id}">${getEmoji(p.name)}</span>
           <span class="card-status ${isSoldOut ? 'sold-out' : 'on-sale'}" style="z-index:3">${isSoldOut ? 'Sold Out' : 'On Sale'}</span>
           <span class="card-condition" style="z-index:3">${p.condition}</span>
         </div>

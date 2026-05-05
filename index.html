@@ -580,12 +580,12 @@ async function fetchAndCache() {
       localStorage.setItem('bgk_products_cache', JSON.stringify(PRODUCTS));
       localStorage.setItem('bgk_cache_time', Date.now().toString());
     } catch(e) {}
-    // ซ่อน loading และแสดงผลทันที ไม่รอ renderAdmin
+    // ซ่อน loading ทันทีและแสดงผล
+    document.querySelectorAll('#loadingOverlay').forEach(el => el.style.display = 'none');
     if (loadingEl) loadingEl.style.display = 'none';
     filtered = [...PRODUCTS];
     applyFilters();
-    // renderAdmin ทีหลัง ไม่บล็อก UI
-    setTimeout(() => renderAdmin(), 100);
+    setTimeout(() => renderAdmin(), 200);
     return;
   } catch(e) {
     console.error('โหลดไม่ได้:', e);
@@ -1055,6 +1055,13 @@ loadFromSheets();
   </div>
   <style>@keyframes loadbar{0%{width:0%}50%{width:80%}100%{width:100%}}</style>
 </div>
+<script>
+  // Fail-safe: ซ่อน loading หลัง 8 วินาทีเสมอ ไม่ว่าจะเกิดอะไรขึ้น
+  setTimeout(() => {
+    const el = document.getElementById('loadingOverlay');
+    if (el) el.style.display = 'none';
+  }, 8000);
+</script>
 <div id="loadErrorMsg" style="display:none;position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#e94560;color:white;padding:0.8rem 1.5rem;border-radius:10px;font-size:0.85rem;z-index:999">
   ⚠️ โหลดข้อมูลไม่ได้ — กรุณาตรวจสอบว่า Google Sheets แชร์เป็น Public แล้ว
 </div>

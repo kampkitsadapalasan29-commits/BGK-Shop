@@ -192,6 +192,13 @@
   }
 
   .card-footer { padding: 0.7rem 0.9rem 0.9rem; border-top: 1px solid var(--border); }
+  .fb-chat-btn {
+    background: linear-gradient(135deg, #0866ff, #1877f2) !important;
+  }
+  .fb-chat-btn:hover {
+    background: linear-gradient(135deg, #0752d4, #1460cc) !important;
+    transform: translateY(-1px);
+  }
   .add-cart-btn {
     width: 100%; padding: 0.5rem; background: var(--accent); border: none; border-radius: 8px;
     color: white; font-family: 'Prompt', sans-serif; font-size: 0.82rem; font-weight: 600;
@@ -746,9 +753,12 @@ function renderProducts() {
           </div>
         </div>
         <div class="card-footer">
-          <button class="add-cart-btn" onclick="addToCart(${p.id})" ${isSoldOut ? 'disabled' : ''}>
-            ${isSoldOut ? 'หมดแล้ว' : '+ เพิ่มในตะกร้า'}
-          </button>
+          ${isSoldOut
+            ? `<button class="add-cart-btn" disabled>หมดแล้ว</button>`
+            : `<button class="add-cart-btn fb-chat-btn" onclick="openFBChat('${p.name}', '${p.condition}', ${p.sellPrice})">
+                💬 สอบถาม / สั่งซื้อ
+              </button>`
+          }
         </div>
       </div>`;
     }).join('');
@@ -1007,6 +1017,12 @@ function openOrder() {
 
 function closeOrder() {
   document.getElementById('orderModal').classList.remove('show');
+}
+
+function openFBChat(name, condition, price) {
+  const msg = `สนใจสั่งซื้อ: ${name} (${condition}) ราคา ฿${price.toLocaleString()}`;
+  const url = `https://m.me/61553164701071?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
 }
 
 const ORDERS_URL = 'https://script.google.com/macros/s/AKfycbyaF-nWzsKASCgpZwh14FuXN7wr2jNMrngvAPmlN10yNJQIVTV9HBBX19eb9ZKoictrvA/exec';

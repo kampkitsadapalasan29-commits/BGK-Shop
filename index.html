@@ -1122,7 +1122,19 @@ function renderAdmin() {
   }).join('');
 }
 
+const ADMIN_PASS = 'Kitsada110358';
+let adminUnlocked = false;
+
 function showTab(tab, btn) {
+  if (tab === 'admin' && !adminUnlocked) {
+    const input = prompt('🔐 กรุณาใส่รหัสผ่าน Admin:');
+    if (input === null) return; // กด Cancel
+    if (input !== ADMIN_PASS) {
+      alert('❌ รหัสผ่านไม่ถูกต้อง');
+      return;
+    }
+    adminUnlocked = true;
+  }
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   if (tab === 'admin') {

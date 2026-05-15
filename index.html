@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <!-- Google Analytics -->
@@ -15,24 +15,49 @@
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --primary: #1a1a2e;
     --accent: #e94560;
     --accent2: #f5a623;
-    --surface: #16213e;
-    --surface2: #0f3460;
+    --green: #00c897;
+    --radius: 14px;
+    --transition: 0.3s ease;
+  }
+
+  /* DARK MODE (default) */
+  [data-theme="dark"] {
+    --primary: #0f0f1a;
+    --surface: #1a1a2e;
+    --surface2: #16213e;
+    --card-bg: #1e2a45;
     --text: #eaeaea;
     --text-muted: #8892a4;
-    --green: #00c897;
-    --card-bg: #1e2a45;
     --border: rgba(255,255,255,0.08);
+    --shadow: rgba(0,0,0,0.4);
+    --search-bg: rgba(255,255,255,0.07);
+    --filter-bg: #1e2a45;
+    --header-bg: linear-gradient(135deg, #1a1a2e, #0f0f1a);
+  }
+
+  /* LIGHT MODE */
+  [data-theme="light"] {
+    --primary: #f0f2f5;
+    --surface: #ffffff;
+    --surface2: #e8ecf0;
+    --card-bg: #ffffff;
+    --text: #1a1a2e;
+    --text-muted: #6b7280;
+    --border: rgba(0,0,0,0.08);
+    --shadow: rgba(0,0,0,0.12);
+    --search-bg: rgba(0,0,0,0.05);
+    --filter-bg: #ffffff;
+    --header-bg: linear-gradient(135deg, #ffffff, #f0f2f5);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Prompt', sans-serif; background: var(--primary); color: var(--text); min-height: 100vh; }
+  body { font-family: 'Prompt', sans-serif; background: var(--primary); color: var(--text); min-height: 100vh; transition: background var(--transition), color var(--transition); }
 
   /* BANNER SLIDESHOW */
   .banner-wrap {
     width: 100%; overflow: hidden; position: relative;
-    background: #0d0d14;
+    background: var(--primary);
     max-height: 320px;
   }
   .banner-track {
@@ -51,7 +76,7 @@
     width: 100%; height: 100%;
     display: flex; align-items: center; justify-content: center;
     color: var(--text-muted); font-size: 0.9rem;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    background: var(--surface2);
   }
   .banner-btn {
     position: absolute; top: 50%; transform: translateY(-50%);
@@ -78,7 +103,7 @@
 
 /* HEADER */
   header {
-    background: linear-gradient(135deg, var(--surface) 0%, var(--primary) 100%);
+    background: var(--header-bg);
     border-bottom: 1px solid var(--border);
     position: sticky; top: 0; z-index: 100;
     box-shadow: 0 4px 20px rgba(0,0,0,0.4);
@@ -99,13 +124,46 @@
   .search-wrap { flex: 1; max-width: 480px; position: relative; }
   .search-wrap input {
     width: 100%; padding: 0.55rem 1rem 0.55rem 2.8rem;
-    background: rgba(255,255,255,0.07); border: 1px solid var(--border);
+    background: var(--search-bg); border: 1px solid var(--border);
     border-radius: 10px; color: var(--text); font-family: 'Prompt', sans-serif;
     font-size: 0.88rem; outline: none; transition: 0.2s;
   }
-  .search-wrap input:focus { border-color: var(--accent); background: rgba(255,255,255,0.1); }
+  .search-wrap input:focus { border-color: var(--accent); background: var(--search-bg); }
   .search-wrap input::placeholder { color: var(--text-muted); }
   .search-icon { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px; }
+
+  .theme-toggle-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 1rem; transition: var(--transition);
+    flex-shrink: 0;
+  }
+  .theme-toggle-btn:hover { transform: scale(1.1); }
+
+  /* BACK TO TOP */
+  .back-to-top {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 500;
+    background: var(--accent); color: white; border: none;
+    width: 44px; height: 44px; border-radius: 50%;
+    font-size: 1.2rem; cursor: pointer; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s, transform 0.3s; box-shadow: 0 4px 15px rgba(233,69,96,0.4);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .back-to-top.show { opacity: 1; pointer-events: auto; }
+  .back-to-top:hover { transform: scale(1.1); }
+
+  /* Light mode card adjustments */
+  [data-theme="light"] .product-card { box-shadow: 0 2px 12px var(--shadow); }
+  [data-theme="light"] .product-card:hover { box-shadow: 0 8px 30px var(--shadow); }
+  [data-theme="light"] .filter-select { color: var(--text); }
+  [data-theme="light"] .search-wrap input { color: var(--text); }
+  [data-theme="light"] .tabs { border-bottom: 1px solid var(--border); }
+  [data-theme="light"] .stat-pill { background: var(--surface2); }
+  [data-theme="light"] header { box-shadow: 0 2px 12px var(--shadow); }
+  [data-theme="light"] .card-name { color: var(--text); }
+  [data-theme="light"] .card-lang { color: var(--text-muted); }
+  [data-theme="light"] .card-footer { background: var(--card-bg); border-top: 1px solid var(--border); }
 
   .cart-btn {
     position: relative; background: var(--accent); border: none; border-radius: 10px;
@@ -138,7 +196,7 @@
     display: flex; gap: 0.7rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.2rem;
   }
   .filter-select {
-    padding: 0.45rem 0.9rem; background: var(--card-bg); border: 1px solid var(--border);
+    padding: 0.45rem 0.9rem; background: var(--filter-bg); border: 1px solid var(--border);
     border-radius: 8px; color: var(--text); font-family: 'Prompt', sans-serif; font-size: 0.82rem;
     cursor: pointer; outline: none;
   }
@@ -170,7 +228,7 @@
 
   .card-img {
     height: 200px;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    background: var(--surface2);
     display: flex; align-items: center; justify-content: center;
     font-size: 2.5rem; position: relative;
     overflow: hidden;
@@ -424,7 +482,10 @@
       <span class="search-icon">🔍</span>
       <input type="text" id="searchInput" placeholder="ค้นหาชื่อเกม..." oninput="handleSearch()">
     </div>
-    <button class="cart-btn" onclick="openCart()">
+    <button class="theme-toggle-btn" onclick="toggleTheme()" id="themeToggleBtn" title="เปลี่ยนธีม">
+        🌙
+      </button>
+      <button class="cart-btn" onclick="openCart()">
       🛒 ตะกร้า
       <div class="cart-count" id="cartCount">0</div>
     </button>
@@ -1294,6 +1355,30 @@ function showTab(tab, btn) {
 document.getElementById('cartModal').addEventListener('click', function(e) { if (e.target === this) closeCart(); });
 document.getElementById('orderModal').addEventListener('click', function(e) { if (e.target === this) closeOrder(); });
 
+// ── THEME TOGGLE ──────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  const btn = document.getElementById('themeToggleBtn');
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  btn.textContent = isDark ? '🌙' : '☀️';
+  localStorage.setItem('bgk_theme', isDark ? 'light' : 'dark');
+}
+
+// โหลด theme จาก localStorage
+(function() {
+  const saved = localStorage.getItem('bgk_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) btn.textContent = saved === 'dark' ? '🌙' : '☀️';
+})();
+
+// ── BACK TO TOP ────────────────────────────────────
+window.addEventListener('scroll', () => {
+  const btn = document.getElementById('backToTop');
+  if (btn) btn.classList.toggle('show', window.scrollY > 400);
+});
+
 // init
 loadBanners();
 loadFromSheets();
@@ -1318,5 +1403,6 @@ loadFromSheets();
 <div id="loadErrorMsg" style="display:none;position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#e94560;color:white;padding:0.8rem 1.5rem;border-radius:10px;font-size:0.85rem;z-index:999">
   ⚠️ โหลดข้อมูลไม่ได้ — กรุณาตรวจสอบว่า Google Sheets แชร์เป็น Public แล้ว
 </div>
+<button class="back-to-top" id="backToTop" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="กลับด้านบน">↑</button>
 </body>
 </html>
